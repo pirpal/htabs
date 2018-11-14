@@ -15,16 +15,3 @@ data GuitarString = GuitarString
 -- | Guitar Tuning
 -- a guitar strings container
 type GuitarTuning = [GuitarString]
-
--- standardTuning :: GuitarTuning
--- standardTuning = [
---   GuitarString Mi 24,
---   GuitarString La 24,
---   GuitarString Re 24,
---   GuitarString Sol 24,
---   GuitarString Si 24,
---   GuitarString Mi 24
---   ]
-
--- dropDTuning :: GuitarTuning
--- dropDTuning = [GuitarString Re 24] ++ (tail standardTuning)
