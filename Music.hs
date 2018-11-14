@@ -24,6 +24,9 @@ instance Show TimeSignature where
   show (TimeSignature t b) = (show t) ++ "/" ++ (show b)
 
 -- NOTES AND SCALES =======================================================
+type ScaleList = [Note]
+type ScaleSchema = [Int]
+
 data Note = Note
   {
     note_name   :: String,
@@ -43,9 +46,6 @@ allNotes =
   ]
 
 -- ------------------------------------------------------------------------
-type ScaleSchema = [Int]
-type ScaleList = [Note]
-
 data Scale = Scale
   {
     scale_start_note :: Note,
