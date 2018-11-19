@@ -1,54 +1,147 @@
 module Music where
 
+import System.IO
+import Data.Char
 import Data.List
 import Data.Traversable
 
+-- GENERAL ================================================================
+
+data Language = FR | EN deriving (Eq, Show)
+
 -- DURATIONS & RYTHM ======================================================
--- | fractionalDurations
--- > [1, 2, 4, 8, 16, 32, 64]
-fractionalDurations :: [Integer]
-fractionalDurations = [2^x | x <- take 7 (cycle [0..])]
 
-isLegalDuration :: Integer -> Bool
-isLegalDuration d = d `elem` fractionalDurations
+intDurations :: [Int]
+intDurations = [1, 2, 4, 8, 16, 32, 64]
 
--- ------------------------------------------------------------------------
--- | TimeSignature
--- > waltz = TimeSignature 3 4
+fractionalDuration :: Fractional a => a -> a
+fractionalDuration d = 1/d
+
+-- |> waltz = TimeSignature 3 4
 data TimeSignature = TimeSignature
   {
-    times         :: Int,
-    base_duration :: Int
+    times    :: Int,
+    duration :: Int
   }
 instance Show TimeSignature where
-  show (TimeSignature t b) = (show t) ++ "/" ++ (show b)
+  show (TimeSignature t d) = (show t) ++ "/" ++ (show d)
 
--- NOTES AND SCALES =======================================================
-type ScaleList = [Note]
-type ScaleSchema = [Int]
+
+-- NOTES & SCALES =========================================================
+type Scale = [Note]
+type ScalePattern = [Int]
+type Chord = [Note]
+type Armure = [Note] -- ?
+type NoteName = (NoteNameFR, NoteNameEN)
+
+data NoteNameFR = Do | Re | Mi | Fa | Sol | La | Si deriving (Eq, Ord, Show)
+data NoteNameEN = C  | D  | E  | F  | G   | A  | B  deriving (Eq, Ord, Show)
+
+notesNames :: [NoteName]
+notesNames = zip [Do, Re, Mi, Fa, Sol, La, Si] [C, D, E, F, G, A, B]
+
+notesNamesStartingFrom :: NoteName  -> [NoteName]
+notesNamesStartingFrom nn = (
+  dropWhile (/= nn) notesNames ++ takeWhile (/= nn) notesNames)
+
+getNoteName :: Int -> NoteName
+getNoteName n
+  | n `elem` [0..6] = head (drop n notesNames)
+  | otherwise = head notesNames -- (Do, C) by default
+
+naturalMajorPattern :: ScalePattern
+naturalMajorPattern = [0, 2, 4, 5, 7, 9, 11, 12] -- 1 == 1/2 tone
+
+data Alteration =  Natural | Flat | Sharp deriving (Eq, Ord)
+instance Show Alteration where
+  show Natural = ""
+  show Flat  = "b" -- Bemol
+  show Sharp = "#" -- Diese
+
+data Pointed = Empty | Point deriving (Eq, Ord)
+instance Show Pointed where
+  show Empty = ""
+  show Point = "."
 
 data Note = Note
   {
-    note_name   :: String,
-    pitch       :: Int
-  }
-instance Show Note where
-  show (Note n _) = n
+    _note_index      :: Int,
+    _note_names      :: (NoteNameFR, NoteNameEN),
+    _note_alteration :: Alteration,
+    _note_duration   :: Int,
+    _note_pointed    :: Pointed
+  } deriving (Eq, Ord, Show)
 
-allNotes :: ScaleList
-allNotes =
-  [
-    Note "do"   1, Note "dod" 1, Note "reb"  1, Note "re"  1,
-    Note "red"  1, Note "mib" 1, Note "mi"   1, Note "mid" 1,
-    Note "fa"   1, Note "fad" 1, Note "solb" 1, Note "sol" 1,
-    Note "sold" 1, Note "lab" 1, Note "la"   1, Note "lad" 1,
-    Note "sib"  1, Note "si"  1, Note "dob"  1
-  ]
+nameFR :: Note -> String
+nameFR (Note _ n a d p) = show (fst n) ++ show a ++ show d ++ show p
 
--- ------------------------------------------------------------------------
-data Scale = Scale
+nameEN :: Note -> String
+nameEN (Note _ n a d p) = show (snd n) ++ show a ++ show d ++ show p
+
+lowerName :: String -> String
+lowerName n = [(toLower (head n))] ++ (tail n)
+
+lngName :: Note -> Language -> String
+lngName n l
+  | l == FR = lowerName (nameFR n)
+  | l == EN = lowerName (nameEN n)
+  | otherwise = "LANGUAGE ERROR"
+
+getIndex :: Note -> Int
+getIndex (Note i _ _ _ _ ) = i
+
+getDuration :: Note -> Int
+getDuration (Note _ _ _ d _) = d 
+
+miMajorScale :: Scale
+miMajorScale = [
+  Note 0  (Mi,  E) Natural 4 Empty,
+  Note 2  (Fa,  F) Sharp   4 Empty,
+  Note 4  (Sol, G) Sharp   4 Empty,
+  Note 5  (La,  A) Natural 4 Empty,
+  Note 7  (Si,  B) Natural 4 Empty,
+  Note 9  (Do,  C) Sharp   4 Empty,
+  Note 11 (Re,  D) Sharp   4 Empty]
+
+-- naturalNotes :: []
+naturalNotes = do
+  forM naturalMajorPattern $ \i -> do
+    show (i)
+
+-- do dod re mib mi fa fad sol sold la sib si
+-- octave :: Note -> Note
+-- octave n = Note ((getIndex n) + 1) (nameFR n) (nameEN n) - - -)
+-- initNoteFromTuple :: (Int, String) -> Note
+-- initNoteFromTuple t = Note (snd t) (fst t)
+
+-- chromaticScaleFrom :: Monad m => [Char] -> Int -> m Scale
+-- chromaticScaleFrom note nb = do
+--   let t = zip [0..] (take nb (notesNamesStartingFrom note))
+--   return (take nb (cycle (map (initNoteFromTuple) t)))
+  
+-- patternScaleFrom note patt = do
+--   let lst = []
+--   let cs = head (chromaticScaleFrom note 12)
+  -- if length cs == 1 then putStrLn "1 " else putStrLn "+.."
+  -- forM patt $ \index -> do
+    -- putStrLn note
+    -- lst ++ [cs !! index]
+  -- lst ++ [(head (head cs))]
+  -- return lst
+    
+-- HARMONY ==============================================================
+
+data Degrees = I | II | III | IV | V | VI | VII deriving (Ord, Eq, Show)
+         
+-- STAFF ================================================================
+
+data Staff = Staff
   {
-    scale_start_note :: Note,
-    scale_name       :: String,
-    scale_list       :: ScaleList
+    _staff_num       :: Int,
+    _staff_time_sign :: TimeSignature,
+    _staff_scale     :: Scale, -- Armure
+    _staff_notes     :: [Note]
   }
+
+staffTotalTime :: Staff -> Int
+staffTotalTime (Staff _ _ _ n) =  sum (map (getDuration) n)
